@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Check, X, Users, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { studentApi, attendanceApi } from "@/api/api"; // Import new APIs
 
 interface Student {
   id: string;
@@ -34,27 +34,18 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
 
   const fetchStudentsAndAttendance = async () => {
     try {
-      // 학생 목록 가져오기
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('students')
-        .select('*')
-        .order('name');
+      // Fetch students
+      const studentsResponse = await studentApi.getAllStudents();
+      const studentsData: Student[] = studentsResponse.data;
 
-      if (studentsError) throw studentsError;
-
-      // 오늘 출석 기록 가져오기
-      const { data: attendanceData, error: attendanceError } = await supabase
-        .from('attendance_records')
-        .select('student_id, is_present')
-        .eq('attendance_date', todayDate);
-
-      if (attendanceError) throw attendanceError;
+      // Fetch today's attendance records
+      const attendanceResponse = await attendanceApi.getAttendanceRecordsByDate(todayDate);
+      const attendanceData = attendanceResponse.data;
 
       setStudents(studentsData || []);
       
-      // 출석 기록을 객체로 변환
       const attendanceMap: Record<string, boolean> = {};
-      attendanceData?.forEach(record => {
+      attendanceData?.forEach((record: any) => { // Adjust type to any for now
         attendanceMap[record.student_id] = record.is_present;
       });
       setAttendance(attendanceMap);
@@ -62,7 +53,7 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
     } catch (error: any) {
       toast({
         title: "오류 발생",
-        description: "데이터를 불러오는 중 오류가 발생했습니다.",
+        description: error.response?.data?.message || "데이터를 불러오는 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -80,25 +71,13 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('로그인이 필요합니다.');
-
-      // 출석 기록 생성/업데이트
       const attendanceRecords = students.map(student => ({
         student_id: student.id,
-        user_id: user.user.id,
         attendance_date: todayDate,
         is_present: attendance[student.id] || false
       }));
 
-      // upsert를 사용하여 기록 생성/업데이트
-      const { error } = await supabase
-        .from('attendance_records')
-        .upsert(attendanceRecords, {
-          onConflict: 'student_id,attendance_date'
-        });
-
-      if (error) throw error;
+      await attendanceApi.upsertAttendanceRecords(attendanceRecords);
 
       const presentCount = Object.values(attendance).filter(Boolean).length;
       toast({
@@ -108,7 +87,7 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
     } catch (error: any) {
       toast({
         title: "오류 발생",
-        description: error.message || "출석부 저장 중 오류가 발생했습니다.",
+        description: error.response?.data?.message || "출석부 저장 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     } finally {

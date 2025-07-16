@@ -5,46 +5,51 @@ import { AttendanceCheck } from "@/components/AttendanceCheck";
 import { StudentManagement } from "@/components/StudentManagement";
 import { TeacherProfile } from "@/components/TeacherProfile";
 import { EditStudent } from "@/components/EditStudent";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
+import { authApi, profileApi } from "@/api/api"; // Import authApi and profileApi
 
 const HomePage = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userSession, setUserSession] = useState<Session | null>(null);
-  const [activePage, setActivePage] = useState('dashboard');
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any | null>(null); // Change User to any
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setUserSession(session);
-        setCurrentUser(session?.user ?? null);
-        setAuthLoading(false);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        try {
+          const response = await authApi.getProfile();
+          setCurrentUser(response.data);
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+          localStorage.removeItem('accessToken');
+          setCurrentUser(null);
+        }
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email);
-      setUserSession(session);
-      setCurrentUser(session?.user ?? null);
       setAuthLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    checkAuth();
   }, []);
 
-  const handleUserLogout = async () => {
+  const handleUserLogin = async (token: string) => {
+    localStorage.setItem('accessToken', token);
     try {
-      await supabase.auth.signOut();
-      setActivePage('dashboard');
+      const response = await authApi.getProfile();
+      setCurrentUser(response.data);
     } catch (error) {
-      console.error('로그아웃 에러:', error);
+      console.error('Failed to fetch user profile after login:', error);
+      localStorage.removeItem('accessToken');
+      setCurrentUser(null);
     }
   };
+
+  const handleUserLogout = () => {
+    localStorage.removeItem('accessToken');
+    setCurrentUser(null);
+    setActivePage('dashboard');
+  };
+
+  const [activePage, setActivePage] = useState('dashboard');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const handlePageNavigation = (page: string, studentId?: string) => {
     setActivePage(page);
@@ -53,7 +58,6 @@ const HomePage = () => {
     }
   };
 
-  // Show loading spinner while checking authentication
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
@@ -65,12 +69,10 @@ const HomePage = () => {
     );
   }
 
-  // Show auth form if user is not logged in
   if (!currentUser) {
-    return <AuthForm />;
+    return <AuthForm onLoginSuccess={handleUserLogin} />;
   }
 
-  // Show appropriate page based on activePage state
   switch (activePage) {
     case 'attendance':
       return <AttendanceCheck onBack={() => setActivePage('dashboard')} />;

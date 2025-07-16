@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, UserPlus, Edit, Trash2, Phone, MapPin } from "lucide-react";
 import { AddStudentDialog } from "./AddStudentDialog";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { studentApi } from "@/api/api"; // Import new API
 
 interface Student {
   id: string;
@@ -32,17 +32,12 @@ export const StudentManagement = ({ onBack, onNavigate }: StudentManagementProps
 
   const fetchStudents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setStudents(data || []);
+      const response = await studentApi.getAllStudents();
+      setStudents(response.data || []);
     } catch (error: any) {
       toast({
         title: "오류 발생",
-        description: "학생 목록을 불러오는 중 오류가 발생했습니다.",
+        description: error.response?.data?.message || "학생 목록을 불러오는 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -52,33 +47,16 @@ export const StudentManagement = ({ onBack, onNavigate }: StudentManagementProps
 
   const handleAddStudent = async (studentData: Omit<Student, 'id'>) => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('로그인이 필요합니다.');
-
-      const { data, error } = await supabase
-        .from('students')
-        .insert({
-          name: studentData.name,
-          birthday: studentData.birthday,
-          photo: studentData.photo,
-          parent_contact: studentData.parent_contact,
-          address: studentData.address,
-          user_id: user.user.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setStudents(prev => [...prev, data]);
+      const response = await studentApi.createStudent(studentData);
+      setStudents(prev => [...prev, response.data]);
       toast({
         title: "학생 등록 완료",
-        description: `${studentData.name} 학생이 등록되었습니다.`,
+        description: `${studentData.name} 학생이 등록되었습니다.`, 
       });
     } catch (error: any) {
       toast({
         title: "오류 발생",
-        description: error.message || "학생 등록 중 오류가 발생했습니다.",
+        description: error.response?.data?.message || "학생 등록 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     }
@@ -88,22 +66,17 @@ export const StudentManagement = ({ onBack, onNavigate }: StudentManagementProps
     try {
       const student = students.find(s => s.id === studentId);
       
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', studentId);
-
-      if (error) throw error;
+      await studentApi.deleteStudent(studentId);
 
       setStudents(prev => prev.filter(s => s.id !== studentId));
       toast({
         title: "학생 삭제 완료",
-        description: `${student?.name} 학생이 삭제되었습니다.`,
+        description: `${student?.name} 학생이 삭제되었습니다.`, 
       });
     } catch (error: any) {
       toast({
         title: "오류 발생",
-        description: error.message || "학생 삭제 중 오류가 발생했습니다.",
+        description: error.response?.data?.message || "학생 삭제 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     }

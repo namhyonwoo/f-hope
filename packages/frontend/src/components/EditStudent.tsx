@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Save, Loader2, Camera, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { studentApi, attendanceApi } from "@/api/api"; // Import new APIs
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -36,39 +36,27 @@ export const EditStudent = ({ studentId, onBack }: EditStudentProps) => {
 
   const fetchStudent = async () => {
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', studentId)
-        .single();
-
-      if (error) {
-        console.error('학생 정보 조회 에러:', error);
-        toast({
-          title: "에러",
-          description: "학생 정보를 불러오지 못했습니다.",
-          variant: "destructive",
-        });
-        return;
-      }
+      const response = await studentApi.getStudentById(studentId);
+      const data = response.data;
 
       setStudent(data);
       setFormData({
         name: data.name || "",
-        birthday: data.birthday || "",
+        birthday: data.birthday ? new Date(data.birthday).toISOString().split('T')[0] : "",
         parent_contact: data.parent_contact || "",
         address: data.address || "",
       });
 
-      // 학생 사진 URL 생성
       if (data.photo) {
-        const { data: { publicUrl } } = supabase.storage
-          .from('profiles')
-          .getPublicUrl(data.photo);
-        setPhotoUrl(publicUrl);
+        setPhotoUrl(data.photo); // photo is already a public URL from backend
       }
-    } catch (error) {
-      console.error('학생 정보 가져오기 실패:', error);
+    } catch (error: any) {
+      console.error('학생 정보 조회 에러:', error);
+      toast({
+        title: "에러",
+        description: error.response?.data?.message || "학생 정보를 불러오지 못했습니다.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -82,7 +70,6 @@ export const EditStudent = ({ studentId, onBack }: EditStudentProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // 파일 크기 체크 (5MB 제한)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "에러",
@@ -94,56 +81,18 @@ export const EditStudent = ({ studentId, onBack }: EditStudentProps) => {
 
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/students/${studentId}.${fileExt}`;
-
-      // 기존 파일 삭제
-      if (student?.photo) {
-        await supabase.storage
-          .from('profiles')
-          .remove([student.photo]);
-      }
-
-      // 새 파일 업로드
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // 학생 정보에 photo URL 업데이트
-      const { error: updateError } = await supabase
-        .from('students')
-        .update({ photo: fileName })
-        .eq('id', studentId);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // 새 URL 설정
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(fileName);
-      
-      setPhotoUrl(publicUrl + '?t=' + Date.now()); // 캐시 방지
-
+      const response = await studentApi.uploadStudentPhoto(studentId, file);
+      setPhotoUrl(response.data.photoUrl + '?t=' + Date.now()); // Cache bust
       toast({
         title: "성공",
         description: "학생 사진이 업로드되었습니다.",
       });
-
-      fetchStudent();
-    } catch (error) {
+      fetchStudent(); // Re-fetch student to update photo path in state
+    } catch (error: any) {
       console.error('파일 업로드 에러:', error);
       toast({
         title: "에러",
-        description: "파일 업로드에 실패했습니다.",
+        description: error.response?.data?.message || "파일 업로드에 실패했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -163,19 +112,12 @@ export const EditStudent = ({ studentId, onBack }: EditStudentProps) => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('students')
-        .update({
-          name: formData.name,
-          birthday: formData.birthday || null,
-          parent_contact: formData.parent_contact || null,
-          address: formData.address || null,
-        })
-        .eq('id', studentId);
-
-      if (error) {
-        throw error;
-      }
+      await studentApi.updateStudent(studentId, {
+        name: formData.name,
+        birthday: formData.birthday || null,
+        parent_contact: formData.parent_contact || null,
+        address: formData.address || null,
+      });
 
       toast({
         title: "성공",
@@ -183,11 +125,11 @@ export const EditStudent = ({ studentId, onBack }: EditStudentProps) => {
       });
 
       fetchStudent();
-    } catch (error) {
+    } catch (error: any) {
       console.error('학생 정보 저장 에러:', error);
       toast({
         title: "에러",
-        description: "학생 정보 저장에 실패했습니다.",
+        description: error.response?.data?.message || "학생 정보 저장에 실패했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -198,28 +140,8 @@ export const EditStudent = ({ studentId, onBack }: EditStudentProps) => {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      // 학생 사진 삭제
-      if (student?.photo) {
-        await supabase.storage
-          .from('profiles')
-          .remove([student.photo]);
-      }
-
-      // 출석 기록 먼저 삭제
-      await supabase
-        .from('attendance_records')
-        .delete()
-        .eq('student_id', studentId);
-
-      // 학생 정보 삭제
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', studentId);
-
-      if (error) {
-        throw error;
-      }
+      // Attendance records are deleted via cascade in the backend
+      await studentApi.deleteStudent(studentId);
 
       toast({
         title: "성공",
@@ -227,11 +149,11 @@ export const EditStudent = ({ studentId, onBack }: EditStudentProps) => {
       });
 
       onBack();
-    } catch (error) {
+    } catch (error: any) {
       console.error('학생 삭제 에러:', error);
       toast({
         title: "에러",
-        description: "학생 삭제에 실패했습니다.",
+        description: error.response?.data?.message || "학생 삭제에 실패했습니다.",
         variant: "destructive",
       });
     } finally {

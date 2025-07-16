@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Users, UserPlus, LogOut, CheckCircle2, Clock, User } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { studentApi, attendanceApi } from "@/api/api"; // Import new APIs
 
 interface DashboardProps {
   onLogout: () => void;
@@ -27,24 +27,14 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
 
   const fetchDashboardData = async () => {
     try {
-      // 전체 학생 수 가져오기
-      const { count: studentCount, error: studentError } = await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true });
+      // Fetch total students
+      const studentsResponse = await studentApi.getAllStudents();
+      setTotalStudents(studentsResponse.data.length);
 
-      if (studentError) throw studentError;
+      // Fetch today's attendance summary
+      const attendanceSummaryResponse = await attendanceApi.getAttendanceSummary(todayDate);
+      setPresentToday(attendanceSummaryResponse.data.presentToday);
 
-      // 오늘 출석한 학생 수 가져오기
-      const { count: presentCount, error: attendanceError } = await supabase
-        .from('attendance_records')
-        .select('*', { count: 'exact', head: true })
-        .eq('attendance_date', todayDate)
-        .eq('is_present', true);
-
-      if (attendanceError) throw attendanceError;
-
-      setTotalStudents(studentCount || 0);
-      setPresentToday(presentCount || 0);
     } catch (error) {
       console.error('Dashboard 데이터 로딩 오류:', error);
     } finally {

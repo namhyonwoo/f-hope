@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Camera, Save, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { profileApi } from "@/api/api"; // Import new API
 import { useToast } from "@/hooks/use-toast";
 
 interface TeacherProfileProps {
@@ -28,34 +28,22 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
 
   const fetchProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const response = await profileApi.getProfile();
+      const data = response.data;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('프로필 조회 에러:', error);
-        return;
+      setProfile(data);
+      setDisplayName(data.display_name || '');
+      
+      if (data.avatar_url) {
+        setAvatarUrl(data.avatar_url); // avatar_url is already a public URL from backend
       }
-
-      if (data) {
-        setProfile(data);
-        setDisplayName(data.display_name || '');
-        
-        // 프로필 사진 URL 생성
-        if (data.avatar_url) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('profiles')
-            .getPublicUrl(data.avatar_url);
-          setAvatarUrl(publicUrl);
-        }
-      }
-    } catch (error) {
-      console.error('프로필 가져오기 실패:', error);
+    } catch (error: any) {
+      console.error('프로필 조회 에러:', error);
+      toast({
+        title: "에러",
+        description: error.response?.data?.message || "프로필 정보를 불러오지 못했습니다.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -64,20 +52,9 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          display_name: displayName,
-          role: profile?.role || 'teacher'
-        });
-
-      if (error) {
-        throw error;
-      }
+      await profileApi.updateProfile({
+        display_name: displayName,
+      });
 
       toast({
         title: "성공",
@@ -85,11 +62,11 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
       });
 
       fetchProfile();
-    } catch (error) {
+    } catch (error: any) {
       console.error('프로필 저장 에러:', error);
       toast({
         title: "에러",
-        description: "프로필 저장에 실패했습니다.",
+        description: error.response?.data?.message || "프로필 저장에 실패했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -101,7 +78,6 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // 파일 크기 체크 (5MB 제한)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "에러",
@@ -113,60 +89,18 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
 
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
-
-      // 기존 파일 삭제
-      if (profile?.avatar_url) {
-        await supabase.storage
-          .from('profiles')
-          .remove([profile.avatar_url]);
-      }
-
-      // 새 파일 업로드
-      const { error: uploadError } = await supabase.storage
-        .from('profiles')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // 프로필에 avatar_url 업데이트
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          display_name: displayName,
-          avatar_url: fileName,
-          role: profile?.role || 'teacher'
-        });
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // 새 URL 설정
-      const { data: { publicUrl } } = supabase.storage
-        .from('profiles')
-        .getPublicUrl(fileName);
-      
-      setAvatarUrl(publicUrl + '?t=' + Date.now()); // 캐시 방지
-
+      const response = await profileApi.uploadAvatar(file);
+      setAvatarUrl(response.data.avatarUrl + '?t=' + Date.now()); // Cache bust
       toast({
         title: "성공",
         description: "프로필 사진이 업로드되었습니다.",
       });
-
-      fetchProfile();
-    } catch (error) {
+      fetchProfile(); // Re-fetch profile to update avatar_url in state
+    } catch (error: any) {
       console.error('파일 업로드 에러:', error);
       toast({
         title: "에러",
-        description: "파일 업로드에 실패했습니다.",
+        description: error.response?.data?.message || "파일 업로드에 실패했습니다.",
         variant: "destructive",
       });
     } finally {

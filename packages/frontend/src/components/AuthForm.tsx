@@ -5,71 +5,64 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Heart, Users, UserPlus, Chrome } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { authApi } from "@/api/api"; // Import authApi
 
-interface AuthFormProps {}
+interface AuthFormProps {
+  onLoginSuccess: (token: string) => void;
+}
 
-export const AuthForm = ({}: AuthFormProps) => {
+export const AuthForm = ({ onLoginSuccess }: AuthFormProps) => {
   const [isSignup, setIsSignup] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // Changed from username to email
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [displayName, setDisplayName] = useState(""); // Changed from name to displayName
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       if (isSignup) {
-        const { error } = await supabase.auth.signUp({
-          email: username,
+        const response = await authApi.register({
+          email: email,
           password: password,
-          options: {
-            data: {
-              name: name
-            },
-            emailRedirectTo: `${window.location.origin}/`
-          }
+          display_name: displayName,
         });
-        
-        if (error) throw error;
         
         toast({
           title: "회원가입 완료",
-          description: "이메일을 확인하여 계정을 활성화해주세요.",
+          description: "계정이 성공적으로 생성되었습니다. 로그인해주세요.",
         });
+        setIsSignup(false); // Switch to login form after successful registration
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: username,
+        const response = await authApi.login({
+          email: email,
           password: password,
         });
         
-        if (error) throw error;
+        onLoginSuccess(response.data.accessToken);
+        toast({
+          title: "로그인 성공",
+          description: "환영합니다!",
+        });
       }
     } catch (error: any) {
       toast({
         title: "오류 발생",
-        description: error.message || "인증 중 오류가 발생했습니다.",
+        description: error.response?.data?.message || "인증 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     }
   };
 
   const handleGoogleLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`
-        }
-      });
-      
-      if (error) {
-        console.error('Google 로그인 에러:', error.message);
-      }
-    } catch (error) {
-      console.error('Google 로그인 실패:', error);
-    }
+    // Implement Google OAuth flow here, redirect to backend OAuth endpoint
+    // For now, just a placeholder
+    toast({
+      title: "Google 로그인",
+      description: "Google 로그인은 아직 구현되지 않았습니다.",
+      variant: "info",
+    });
   };
 
   return (
@@ -92,12 +85,12 @@ export const AuthForm = ({}: AuthFormProps) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignup && (
               <div className="space-y-2">
-                <Label htmlFor="name">이름</Label>
+                <Label htmlFor="displayName">이름</Label>
                 <Input
-                  id="name"
+                  id="displayName"
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="교사 이름을 입력하세요"
                   required
                   className="h-12"
@@ -105,13 +98,13 @@ export const AuthForm = ({}: AuthFormProps) => {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="username">아이디</Label>
+              <Label htmlFor="email">이메일</Label>
               <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="교사 아이디를 입력하세요"
+                id="email"
+                type="email" // Changed type to email
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="교사 이메일을 입력하세요"
                 required
                 className="h-12"
               />
@@ -158,9 +151,9 @@ export const AuthForm = ({}: AuthFormProps) => {
                 variant="ghost"
                 onClick={() => {
                   setIsSignup(!isSignup);
-                  setUsername("");
+                  setEmail("");
                   setPassword("");
-                  setName("");
+                  setDisplayName("");
                 }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
