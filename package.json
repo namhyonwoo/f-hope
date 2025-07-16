@@ -1,0 +1,16 @@
+{
+  "name": "sunday-school-roster-app-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start:frontend": "cd packages/frontend && npm run dev",
+    "start:backend": "cd packages/backend && npm run start:dev",
+    "build:frontend": "cd packages/frontend && npm run build",
+    "build:backend": "cd packages/backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "cd packages/backend && npm run start"
+  }
+}
