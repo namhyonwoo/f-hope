@@ -10,6 +10,9 @@ export class RegisterDto {
 
   @IsString()
   display_name: string;
+
+  @IsString()
+  date_of_birth: string; // Assuming YYYY-MM-DD format
 }
 
 export class LoginDto {

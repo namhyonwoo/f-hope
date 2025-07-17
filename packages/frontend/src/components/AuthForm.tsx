@@ -17,6 +17,7 @@ export const AuthForm = ({ onLoginSuccess }: AuthFormProps) => {
   const [email, setEmail] = useState(""); // Changed from username to email
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(""); // Changed from name to displayName
+  const [dateOfBirth, setDateOfBirth] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +28,7 @@ export const AuthForm = ({ onLoginSuccess }: AuthFormProps) => {
           email: email,
           password: password,
           display_name: displayName,
+          date_of_birth: dateOfBirth,
         });
         
         toast({
@@ -91,6 +93,19 @@ export const AuthForm = ({ onLoginSuccess }: AuthFormProps) => {
                 />
               </div>
             )}
+            {isSignup && (
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">생년월일</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  required
+                  className="h-12"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">이메일</Label>
               <Input
@@ -148,6 +163,7 @@ export const AuthForm = ({ onLoginSuccess }: AuthFormProps) => {
                   setEmail("");
                   setPassword("");
                   setDisplayName("");
+                  setDateOfBirth("");
                 }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >

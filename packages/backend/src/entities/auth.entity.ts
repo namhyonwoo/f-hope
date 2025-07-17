@@ -2,22 +2,19 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { User } from './user.entity'; // Import User entity
 
 @Entity('auths') // This table will store authentication details
-@Unique(['social_id', 'provider']) // Ensure unique email per provider
+@Unique(['identifier', 'provider']) // Ensure unique identifier per provider
 export class Auth {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'text' })
-  email: string;
+  @Column({ type: 'text' }) // email for 'email' provider, social_id for 'google' etc.
+  identifier: string;
 
-  @Column({ type: 'text', nullable: true }) // Nullable for social logins
-  password: string | null; // Hashed password
+  @Column({ type: 'text', nullable: true }) // Hashed password for 'email' provider, null for others
+  credential: string | null;
 
-  @Column({ type: 'text', default: 'email' })
-  provider: string; // e.g., 'email', 'google'
-
-  @Column({ type: 'text', nullable: true }) // Store social ID (e.g., Google ID)
-  social_id: string | null;
+  @Column({ type: 'text' }) // e.g., 'email', 'google'
+  provider: string;
 
   @Column({ type: 'uuid' })
   user_id: string; // Foreign key to User entity

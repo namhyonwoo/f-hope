@@ -23,7 +23,7 @@ export class UserService {
   }
 
   async findUserByEmail(email: string): Promise<User | undefined> {
-    const auth = await this.authsRepository.findOne({ where: { email }, relations: ['user'] });
+    const auth = await this.authsRepository.findOne({ where: { identifier: email, provider: 'email' }, relations: ['user'] });
     return auth ? auth.user : undefined;
   }
 
