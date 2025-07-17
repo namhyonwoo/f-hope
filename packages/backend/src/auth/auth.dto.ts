@@ -19,3 +19,14 @@ export class LoginDto {
   @IsString()
   password: string;
 }
+
+export class SocialSignupDto {
+  @IsString()
+  socialSignupToken: string;
+
+  @IsString()
+  display_name: string;
+
+  @IsString()
+  date_of_birth: string; // Assuming YYYY-MM-DD format
+}

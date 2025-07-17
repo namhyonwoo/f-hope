@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { User } from '../entities/user.entity'; // Import User entity
 import { Auth } from '../entities/auth.entity'; // Import Auth entity
 import { JwtStrategy } from './jwt.strategy';
+import { GoogleStrategy } from './google.strategy';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { JwtStrategy } from './jwt.strategy';
     }),
     ConfigModule,
   ],
-  providers: [AuthService, JwtStrategy], // UserService is no longer directly provided here
+  providers: [AuthService, JwtStrategy, GoogleStrategy], // UserService is no longer directly provided here
   controllers: [AuthController],
   exports: [AuthService], // Export AuthService
 })

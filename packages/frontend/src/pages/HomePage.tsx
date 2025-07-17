@@ -13,18 +13,23 @@ const HomePage = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('HomePage: checking authentication...');
       const token = localStorage.getItem('accessToken');
+      console.log('HomePage: token from localStorage', token);
+
       if (token) {
         try {
           const response = await authApi.getProfile();
+          console.log('HomePage: user profile fetched', response.data);
           setCurrentUser(response.data);
         } catch (error) {
-          console.error('Failed to fetch user profile:', error);
+          console.error('HomePage: Failed to fetch user profile:', error);
           localStorage.removeItem('accessToken');
           setCurrentUser(null);
         }
       }
       setAuthLoading(false);
+      console.log('HomePage: auth check finished, currentUser:', currentUser);
     };
 
     checkAuth();

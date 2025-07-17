@@ -55,14 +55,8 @@ export const AuthForm = ({ onLoginSuccess }: AuthFormProps) => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    // Implement Google OAuth flow here, redirect to backend OAuth endpoint
-    // For now, just a placeholder
-    toast({
-      title: "Google 로그인",
-      description: "Google 로그인은 아직 구현되지 않았습니다.",
-      variant: "info",
-    });
+  const handleGoogleLogin = () => {
+    window.location.href = '/api/auth/google';
   };
 
   return (

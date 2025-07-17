@@ -11,6 +11,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   display_name: string;
 
+  @Column({ type: 'date', nullable: true })
+  date_of_birth: Date;
+
   @Column({ type: 'text', nullable: true })
   avatar_url: string;
 

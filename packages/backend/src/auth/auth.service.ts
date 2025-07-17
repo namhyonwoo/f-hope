@@ -72,35 +72,77 @@ export class AuthService {
     return { userId: user.id, email: payload.email, display_name: user.display_name };
   }
 
-  // For Google OAuth, you would typically have a separate strategy and a callback
-  // This is a placeholder for future integration
-  async validateOAuthLogin(email: string, display_name: string): Promise<{ accessToken: string }> {
-    let auth = await this.authsRepository.findOne({ where: { email, provider: 'google' }, relations: ['user'] });
-    let user: User;
+  async validateOAuthLogin(profile: any): Promise<{ accessToken?: string; socialSignupToken?: string }> {
+    const { email, id: socialId, displayName } = profile;
 
-    if (!auth) {
-      // Create user if not exists
+    // 1. Check if an Auth entry with this socialId and provider 'google' already exists
+    let auth = await this.authsRepository.findOne({
+      where: { social_id: socialId, provider: 'google' },
+      relations: ['user'],
+    });
+
+    if (auth) {
+      // User already exists via Google, issue JWT
+      const payload = { email: auth.email, sub: auth.user.id };
+      return { accessToken: this.jwtService.sign(payload) };
+    }
+
+    // 2. Check if an Auth entry with this email and provider 'email' exists (for linking)
+    auth = await this.authsRepository.findOne({
+      where: { email, provider: 'email' },
+      relations: ['user'],
+    });
+
+    if (auth) {
+      // User exists with email, link Google account
+      auth.social_id = socialId;
+      auth.provider = 'google';
+      await this.authsRepository.save(auth);
+      const payload = { email: auth.email, sub: auth.user.id };
+      return { accessToken: this.jwtService.sign(payload) };
+    }
+
+    // 3. New user, generate social signup token
+    const socialSignupPayload = { email, socialId, displayName };
+    return { socialSignupToken: this.jwtService.sign(socialSignupPayload, { expiresIn: '1h' }) };
+  }
+
+  async socialSignup(socialSignupToken: string, display_name: string, date_of_birth: string): Promise<{ accessToken: string }> {
+    try {
+      console.log('socialSignup: received socialSignupToken', socialSignupToken);
+      const decoded = this.jwtService.verify(socialSignupToken);
+      console.log('socialSignup: decoded token', decoded);
+      const { email, socialId, displayName } = decoded;
+
+      let user = await this.usersRepository.findOne({ where: { display_name: display_name } }); // Check if user with display name exists
+      if (user) {
+        throw new BadRequestException('User with this display name already exists.');
+      }
+
+      // Create new user
       const newUser = this.usersRepository.create({
         display_name,
+        date_of_birth: new Date(date_of_birth),
         role: 'teacher',
       });
       user = await this.usersRepository.save(newUser);
 
       // Create auth entry for Google
-      auth = this.authsRepository.create({
+      const newAuth = this.authsRepository.create({
         email,
         password: null, // No password for OAuth users
         provider: 'google',
+        social_id: socialId,
         user: user,
       });
-      await this.authsRepository.save(auth);
-    } else {
-      user = auth.user;
-    }
+      console.log('socialSignup: newAuth object before saving', newAuth);
+      await this.authsRepository.save(newAuth);
 
-    const payload = { email: auth.email, sub: user.id };
-    return {
-      accessToken: this.jwtService.sign(payload),
-    };
+      const payload = { email, sub: user.id };
+      return { accessToken: this.jwtService.sign(payload) };
+    } catch (error) {
+      console.error('socialSignup: token verification failed', error);
+      throw new UnauthorizedException('Invalid or expired social signup token.');
+    }
   }
 }
