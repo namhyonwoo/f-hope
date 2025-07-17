@@ -48,7 +48,10 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
       <header className="bg-card/95 backdrop-blur-sm border-b shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center">
+            <div 
+              className="w-10 h-10 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center cursor-pointer"
+              onClick={() => onNavigate('profile')}
+            >
               <Users className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
@@ -57,14 +60,6 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              onClick={() => onNavigate('profile')}
-              className="hover:bg-muted"
-            >
-              <User className="w-4 h-4 mr-2" />
-              마이페이지
-            </Button>
             <Button 
               variant="outline" 
               onClick={onLogout}
