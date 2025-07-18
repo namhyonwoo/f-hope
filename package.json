@@ -11,10 +11,10 @@
     "build:frontend": "cd packages/frontend && npm run build",
     "build:backend": "cd packages/backend && npm run build",
     "build:all": "npm run build:frontend && npm run build:backend",
+    "build:prod": "npm install && NODE_ENV=production npm run build:all",
     "start:backend:prod": "cd packages/backend && NODE_ENV=production npm run start:prod",
     "deploy": "npm run build:all && npm run start:backend:prod",
     "start": "cd packages/backend && npm run start",
-    "deploy:prod": "npm install && NODE_ENV=production npm run build:all",
     "prod": "npm install && npm run build:all && NODE_ENV=production npm run start:backend:prod"
   }
 }
