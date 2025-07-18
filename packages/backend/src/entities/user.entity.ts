@@ -11,6 +11,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   display_name: string;
 
+  @Column({ type: 'text', nullable: true })
+  email: string; // 추가된 email 필드
+
   @Column({ type: 'date', nullable: true })
   date_of_birth: Date;
 

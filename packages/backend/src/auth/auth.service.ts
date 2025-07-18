@@ -29,7 +29,8 @@ export class AuthService {
 
     const newUser = this.usersRepository.create({
       display_name: registerDto.display_name,
-      date_of_birth: new Date(registerDto.date_of_birth), // Save date of birth
+      email: registerDto.email, // email을 User 엔티티에 복사
+      date_of_birth: new Date(registerDto.date_of_birth),
       role: 'teacher',
     });
     const user = await this.usersRepository.save(newUser);
@@ -40,12 +41,12 @@ export class AuthService {
       identifier: registerDto.email,
       credential: hashedPassword,
       provider: 'email',
-      user: user, // Link to the newly created user
+      user: user,
     });
     await this.authsRepository.save(newAuth);
     console.log('AuthService: auth record created for user:', user.id);
 
-    const payload = { email: newAuth.identifier, sub: user.id }; // Use identifier for email in payload
+    const payload = { email: newAuth.identifier, sub: user.id };
     console.log('AuthService: creating JWT payload for registration:', payload);
     
     return {
@@ -120,10 +121,15 @@ export class AuthService {
     });
 
     if (auth) {
-      // User exists with email, link Google account
+      // User exists with email, link Google account and update user email if needed
+      if (email && !auth.user.email) {
+        auth.user.email = email; // 구글 이메일을 User 엔티티에 복사
+        await this.usersRepository.save(auth.user);
+      }
+      
       auth.identifier = socialId;
       auth.provider = 'google';
-      auth.credential = null; // Social logins don't have a password
+      auth.credential = null;
       await this.authsRepository.save(auth);
       const payload = { email: auth.identifier, sub: auth.user.id };
       return { accessToken: this.jwtService.sign(payload) };
@@ -141,14 +147,15 @@ export class AuthService {
       console.log('socialSignup: decoded token', decoded);
       const { email, socialId, displayName } = decoded;
 
-      let user = await this.usersRepository.findOne({ where: { display_name: display_name } }); // Check if user with display name exists
+      let user = await this.usersRepository.findOne({ where: { display_name: display_name } });
       if (user) {
         throw new BadRequestException('User with this display name already exists.');
       }
 
-      // Create new user
+      // Create new user with email
       const newUser = this.usersRepository.create({
         display_name,
+        email: email, // 구글 이메일을 User 엔티티에 복사
         date_of_birth: new Date(date_of_birth),
         role: 'teacher',
       });
@@ -156,15 +163,15 @@ export class AuthService {
 
       // Create auth entry for Google
       const newAuth = this.authsRepository.create({
-        identifier: socialId, // Use socialId as identifier for social logins
-        credential: null, // No password for OAuth users
+        identifier: socialId,
+        credential: null,
         provider: 'google',
         user: user,
       });
       console.log('socialSignup: newAuth object before saving', newAuth);
       await this.authsRepository.save(newAuth);
 
-      const payload = { email: email, sub: user.id }; // Use original email for payload
+      const payload = { email: email, sub: user.id };
       return { accessToken: this.jwtService.sign(payload) };
     } catch (error) {
       console.error('socialSignup: token verification failed', error);
