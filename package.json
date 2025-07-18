@@ -14,7 +14,7 @@
     "start:backend:prod": "cd packages/backend && NODE_ENV=production npm run start:prod",
     "deploy": "npm run build:all && npm run start:backend:prod",
     "start": "cd packages/backend && npm run start",
-    "deploy:prod": "npm install && NODE_ENV=production npm run build:all && NODE_ENV=production npm run start:backend:prod",
+    "deploy:prod": "npm install && NODE_ENV=production npm run build:all",
     "prod": "npm install && npm run build:all && NODE_ENV=production npm run start:backend:prod"
   }
 }
