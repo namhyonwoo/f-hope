@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AuthForm } from "@/components/AuthForm";
 import { Dashboard } from "@/components/Dashboard";
 import { AttendanceCheck } from "@/components/AttendanceCheck";
 import { StudentManagement } from "@/components/StudentManagement";
 import { TeacherProfile } from "@/components/TeacherProfile";
 import { EditStudent } from "@/components/EditStudent";
-import { authApi, profileApi } from "@/api/api"; // Import authApi and profileApi
+import { authApi, profileApi } from "@/api/api";
 
 const HomePage = () => {
-  const [currentUser, setCurrentUser] = useState<any | null>(null); // Change User to any
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const checkAuth = async () => {
     console.log('HomePage: checking authentication...');
@@ -32,13 +35,42 @@ const HomePage = () => {
     setAuthLoading(false);
   };
 
+  // URL 파라미터에서 토큰 처리
+  const handleUrlToken = async () => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    
+    if (token) {
+      console.log('HomePage: token found in URL', token);
+      localStorage.setItem('accessToken', token);
+      
+      // URL에서 토큰 파라미터 제거
+      navigate('/dashboard', { replace: true });
+      
+      // 사용자 프로필 가져오기
+      try {
+        const response = await authApi.getProfile();
+        console.log('HomePage: user profile fetched from URL token', response.data);
+        setCurrentUser(response.data);
+      } catch (error) {
+        console.error('HomePage: Failed to fetch user profile from URL token:', error);
+        localStorage.removeItem('accessToken');
+        setCurrentUser(null);
+      }
+    }
+  };
+
   useEffect(() => {
-    checkAuth();
-  }, []);
+    // URL 토큰 처리 먼저
+    handleUrlToken().then(() => {
+      // 그 다음 기존 인증 체크
+      checkAuth();
+    });
+  }, [location.search]); // location.search가 변경될 때마다 실행
 
   const handleUserLogin = async (token: string) => {
     console.log('HomePage: handleUserLogin called with token', token);
-    setAuthLoading(true); // Set loading state before API call
+    setAuthLoading(true);
     localStorage.setItem('accessToken', token);
     try {
       const response = await authApi.getProfile();
@@ -90,7 +122,7 @@ const HomePage = () => {
     case 'students':
       return <StudentManagement onBack={() => setActivePage('dashboard')} onNavigate={handlePageNavigation} />;
     case 'profile':
-      return <TeacherProfile onBack={() => setActivePage('dashboard')} currentUser={currentUser.email || '사용자'} />;
+      return <TeacherProfile onBack={() => setActivePage('dashboard')} currentUser={currentUser} />;
     case 'edit-student':
       return selectedStudentId ? (
         <EditStudent 
@@ -105,7 +137,7 @@ const HomePage = () => {
         <Dashboard 
           onLogout={handleUserLogout}
           onNavigate={handlePageNavigation}
-          currentUser={currentUser.email || '사용자'}
+          currentUser={currentUser.display_name || '사용자'}
         />
       );
   }

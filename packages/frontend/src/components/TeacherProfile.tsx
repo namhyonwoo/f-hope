@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Camera, Save, Loader2 } from "lucide-react";
-import { profileApi } from "@/api/api"; // Import new API
+import { profileApi } from "@/api/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface TeacherProfileProps {
   onBack: () => void;
-  currentUser: string;
+  currentUser: any; // User 객체 전체를 받도록 변경
 }
 
 export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => {
@@ -35,7 +35,7 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
       setDisplayName(data.display_name || '');
       
       if (data.avatar_url) {
-        setAvatarUrl(data.avatar_url); // avatar_url is already a public URL from backend
+        setAvatarUrl(data.avatar_url);
       }
     } catch (error: any) {
       console.error('프로필 조회 에러:', error);
@@ -90,12 +90,12 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
     setUploading(true);
     try {
       const response = await profileApi.uploadAvatar(file);
-      setAvatarUrl(response.data.avatarUrl + '?t=' + Date.now()); // Cache bust
+      setAvatarUrl(response.data.avatarUrl + '?t=' + Date.now());
       toast({
         title: "성공",
         description: "프로필 사진이 업로드되었습니다.",
       });
-      fetchProfile(); // Re-fetch profile to update avatar_url in state
+      fetchProfile();
     } catch (error: any) {
       console.error('파일 업로드 에러:', error);
       toast({
@@ -186,11 +186,11 @@ export const TeacherProfile = ({ onBack, currentUser }: TeacherProfileProps) => 
               />
             </div>
 
-            {/* 이메일 (읽기 전용) */}
+            {/* 이메일 (읽기 전용) - User 엔티티의 email 필드 사용 */}
             <div className="space-y-2">
               <Label className="text-base font-medium">이메일</Label>
               <Input
-                value={currentUser}
+                value={currentUser?.email || '이메일 정보 없음'}
                 disabled
                 className="bg-gray-50 text-gray-600"
               />
