@@ -11,39 +11,45 @@ const HomePage = () => {
   const [currentUser, setCurrentUser] = useState<any | null>(null); // Change User to any
   const [authLoading, setAuthLoading] = useState(true);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      console.log('HomePage: checking authentication...');
-      const token = localStorage.getItem('accessToken');
-      console.log('HomePage: token from localStorage', token);
+  const checkAuth = async () => {
+    console.log('HomePage: checking authentication...');
+    const token = localStorage.getItem('accessToken');
+    console.log('HomePage: token from localStorage', token);
 
-      if (token) {
-        try {
-          const response = await authApi.getProfile();
-          console.log('HomePage: user profile fetched', response.data);
-          setCurrentUser(response.data);
-        } catch (error) {
-          console.error('HomePage: Failed to fetch user profile:', error);
-          localStorage.removeItem('accessToken');
-          setCurrentUser(null);
-        }
+    if (token) {
+      try {
+        const response = await authApi.getProfile();
+        console.log('HomePage: user profile fetched', response.data);
+        setCurrentUser(response.data);
+      } catch (error) {
+        console.error('HomePage: Failed to fetch user profile:', error);
+        localStorage.removeItem('accessToken');
+        setCurrentUser(null);
       }
-      setAuthLoading(false);
-      console.log('HomePage: auth check finished, currentUser:', currentUser);
-    };
+    } else {
+      setCurrentUser(null);
+    }
+    setAuthLoading(false);
+  };
 
+  useEffect(() => {
     checkAuth();
   }, []);
 
   const handleUserLogin = async (token: string) => {
+    console.log('HomePage: handleUserLogin called with token', token);
+    setAuthLoading(true); // Set loading state before API call
     localStorage.setItem('accessToken', token);
     try {
       const response = await authApi.getProfile();
+      console.log('HomePage: user profile fetched after login', response.data);
       setCurrentUser(response.data);
     } catch (error) {
       console.error('Failed to fetch user profile after login:', error);
       localStorage.removeItem('accessToken');
       setCurrentUser(null);
+    } finally {
+      setAuthLoading(false);
     }
   };
 

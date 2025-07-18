@@ -34,7 +34,7 @@ const GoogleOAuthCallback = () => {
       navigate(`/social-signup?token=${socialSignupToken}`); // Redirect to social signup page
     } else {
       console.log('GoogleOAuthCallback: no token or socialSignupToken found, redirecting to login');
-      navigate('/login'); // Redirect to login or an error page
+      navigate('/'); // Redirect to home page (login page)
     }
   }, [location, navigate]);
 

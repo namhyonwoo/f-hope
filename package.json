@@ -11,8 +11,12 @@
     "build:frontend": "cd packages/frontend && npm run build",
     "build:backend": "cd packages/backend && npm run build",
     "build:all": "npm run build:frontend && npm run build:backend",
-    "start:backend:prod": "cd packages/backend && npm run start:prod",
+    "start:backend:prod": "cd packages/backend && NODE_ENV=production npm run start:prod",
     "deploy": "npm run build:all && npm run start:backend:prod",
-    "start": "cd packages/backend && npm run start"
+    "start": "cd packages/backend && npm run start",
+    "deploy:prod": "NODE_ENV=production npm run build:all && NODE_ENV=production npm run start:backend:prod",
+    "install:all": "npm install && cd packages/frontend && npm install && cd ../backend && npm install",
+    "deploy:full": "npm run install:all && npm run build:frontend && npm run build:backend && npm run start:backend:prod",
+    "deploy:full:prod": "NODE_ENV=production npm run install:all && NODE_ENV=production npm run build:frontend && NODE_ENV=production npm run build:backend && NODE_ENV=production npm run start:backend:prod"
   }
 }

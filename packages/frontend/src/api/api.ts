@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -27,8 +27,9 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle token expiration or invalid token
     if (error.response && error.response.status === 401) {
+      console.log('API: 401 Unauthorized, removing token');
       localStorage.removeItem('accessToken');
-      window.location.href = '/'; // Redirect to login page
+      // Don't redirect automatically, let the component handle it
     }
     return Promise.reject(error);
   }
@@ -38,6 +39,7 @@ export const authApi = {
   register: (data: any) => apiClient.post('/auth/register', data),
   login: (data: any) => apiClient.post('/auth/login', data),
   getProfile: () => apiClient.get('/auth/profile'),
+  socialSignup: (data: any) => apiClient.post('/auth/social-signup', data),
 };
 
 export const profileApi = {

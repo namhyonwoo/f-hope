@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
-import axios from 'axios';
+import { authApi } from '@/api/api'; // Import authApi instead of axios
 
 const SocialSignupPage: React.FC = () => {
   const location = useLocation();
@@ -44,7 +44,7 @@ const SocialSignupPage: React.FC = () => {
     }
 
     try {
-      const response = await axios.post('/api/auth/social-signup', {
+      const response = await authApi.socialSignup({
         socialSignupToken,
         display_name: displayName,
         date_of_birth: dateOfBirth,

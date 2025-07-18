@@ -18,7 +18,11 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<{ accessToken: string }> {
+    console.log('AuthService: register attempt for email:', registerDto.email);
+    
     const existingAuth = await this.authsRepository.findOne({ where: { identifier: registerDto.email, provider: 'email' } });
+    console.log('AuthService: existing auth check:', existingAuth ? 'found' : 'not found');
+    
     if (existingAuth) {
       throw new BadRequestException('User with this email already exists');
     }
@@ -29,6 +33,7 @@ export class AuthService {
       role: 'teacher',
     });
     const user = await this.usersRepository.save(newUser);
+    console.log('AuthService: user created with ID:', user.id);
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
     const newAuth = this.authsRepository.create({
@@ -38,28 +43,43 @@ export class AuthService {
       user: user, // Link to the newly created user
     });
     await this.authsRepository.save(newAuth);
+    console.log('AuthService: auth record created for user:', user.id);
 
     const payload = { email: newAuth.identifier, sub: user.id }; // Use identifier for email in payload
+    console.log('AuthService: creating JWT payload for registration:', payload);
+    
     return {
       accessToken: this.jwtService.sign(payload),
     };
   }
 
   async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
+    console.log('AuthService: login attempt for email:', loginDto.email);
+    
     const auth = await this.authsRepository.findOne({ where: { identifier: loginDto.email, provider: 'email' }, relations: ['user'] });
+    console.log('AuthService: found auth record:', auth ? 'yes' : 'no');
+    
     if (!auth || !auth.user) {
+      console.log('AuthService: no auth record or user found');
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!auth.credential) {
+      console.log('AuthService: no credential found');
       throw new UnauthorizedException('Invalid credentials');
     }
+    
     const isPasswordValid = await bcrypt.compare(loginDto.password, auth.credential);
+    console.log('AuthService: password validation result:', isPasswordValid);
+    
     if (!isPasswordValid) {
+      console.log('AuthService: invalid password');
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const payload = { email: auth.identifier, sub: auth.user.id }; // Use identifier for email in payload
+    console.log('AuthService: creating JWT payload:', payload);
+    
     return {
       accessToken: this.jwtService.sign(payload),
     };
@@ -70,7 +90,12 @@ export class AuthService {
     if (!user) {
       return null;
     }
-    return { userId: user.id, email: payload.email, display_name: user.display_name };
+    return { 
+      id: user.id, 
+      email: payload.email, 
+      display_name: user.display_name,
+      role: user.role 
+    };
   }
 
   async validateOAuthLogin(profile: any): Promise<{ accessToken?: string; socialSignupToken?: string }> {

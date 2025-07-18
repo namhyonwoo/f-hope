@@ -58,7 +58,8 @@ export const AuthForm = ({ onLoginSuccess }: AuthFormProps) => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+    window.location.href = `${backendUrl}/auth/google`;
   };
 
   return (
