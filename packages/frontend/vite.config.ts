@@ -16,7 +16,7 @@ export default defineConfig({
   },
   define: {
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-      process.env.BACKEND_URL || 
+      process.env.BACKEND_URL+'/api' ||
       'http://localhost:3001/api'
     ),
   },
