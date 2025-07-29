@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, UserPlus, LogOut, CheckCircle2, Clock, User } from "lucide-react";
+import { Calendar, Users, UserPlus, LogOut, CheckCircle2, Clock, User, GraduationCap } from "lucide-react";
 import { studentApi, attendanceApi } from "@/api/api"; // Import new APIs
 
 interface DashboardProps {
   onLogout: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, id?: string) => void;
   currentUser: string;
 }
 
@@ -154,7 +154,7 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
         </div>
 
         {/* 액션 버튼들 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-0 bg-card/95 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center space-x-3">
@@ -201,6 +201,31 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
                 onClick={() => onNavigate('students')}
               >
                 학생 관리하기
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer border-0 bg-card/95 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-accent to-accent/80 rounded-lg flex items-center justify-center">
+                  <GraduationCap className="w-6 h-6 text-accent-foreground" />
+                </div>
+                <div>
+                  <CardTitle>반 관리</CardTitle>
+                  <CardDescription>
+                    반 정보와 학생들을 관리하세요
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="outline" 
+                className="w-full h-12 border-accent text-accent-foreground hover:bg-accent"
+                onClick={() => onNavigate('classes')}
+              >
+                반 관리하기
               </Button>
             </CardContent>
           </Card>

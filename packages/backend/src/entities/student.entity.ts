@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from './user.entity'; // Import User entity
 import { AttendanceRecord } from './attendance-record.entity';
+import { Class } from './class.entity';
 
 @Entity('students')
 export class Student {
@@ -25,9 +26,16 @@ export class Student {
   @Column({ type: 'uuid' })
   user_id: string; // Foreign key to User entity
 
+  @Column({ type: 'uuid', nullable: true })
+  class_id?: string; // Foreign key to Class entity
+
   @ManyToOne(() => User, user => user.students)
   @JoinColumn({ name: 'user_id' })
   user: User; // Relationship with User entity
+
+  @ManyToOne(() => Class, class_ => class_.students)
+  @JoinColumn({ name: 'class_id' })
+  class?: Class; // Relationship with Class entity
 
   @OneToMany(() => AttendanceRecord, attendanceRecord => attendanceRecord.student)
   attendanceRecords: AttendanceRecord[];

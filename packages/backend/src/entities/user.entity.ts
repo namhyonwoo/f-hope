@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { Student } from './student.entity';
 import { AttendanceRecord } from './attendance-record.entity';
 import { Auth } from './auth.entity'; // Import Auth entity
+import { Class } from './class.entity';
 
 @Entity('users') // This table will store user profile information
 export class User {
@@ -37,4 +38,7 @@ export class User {
 
   @OneToMany(() => AttendanceRecord, attendanceRecord => attendanceRecord.user)
   attendanceRecords: AttendanceRecord[];
+
+  @OneToMany(() => Class, class_ => class_.user)
+  classes: Class[];
 }

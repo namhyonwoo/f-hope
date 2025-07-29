@@ -6,6 +6,8 @@ import { AttendanceCheck } from "@/components/AttendanceCheck";
 import { StudentManagement } from "@/components/StudentManagement";
 import { TeacherProfile } from "@/components/TeacherProfile";
 import { EditStudent } from "@/components/EditStudent";
+import { ClassManagement } from "@/components/ClassManagement";
+import { ClassDetail } from "@/components/ClassDetail";
 import { authApi, profileApi } from "@/api/api";
 
 const HomePage = () => {
@@ -93,11 +95,16 @@ const HomePage = () => {
 
   const [activePage, setActivePage] = useState('dashboard');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
-  const handlePageNavigation = (page: string, studentId?: string) => {
+  const handlePageNavigation = (page: string, id?: string) => {
     setActivePage(page);
-    if (studentId) {
-      setSelectedStudentId(studentId);
+    if (id) {
+      if (page.includes('student') || page === 'edit-student') {
+        setSelectedStudentId(id);
+      } else if (page.includes('class')) {
+        setSelectedClassId(id);
+      }
     }
   };
 
@@ -132,11 +139,37 @@ const HomePage = () => {
       ) : (
         <div>학생을 선택해주세요</div>
       );
+    case 'classes':
+      return <ClassManagement onBack={() => setActivePage('dashboard')} onNavigate={handlePageNavigation} />;
+    case 'class-detail':
+      return selectedClassId ? (
+        <ClassDetail 
+          classId={selectedClassId} 
+          onBack={() => setActivePage('classes')} 
+          onNavigate={handlePageNavigation}
+        />
+      ) : (
+        <div>반을 선택해주세요</div>
+      );
+    case 'create-class':
+      return <ClassManagement onBack={() => setActivePage('dashboard')} onNavigate={handlePageNavigation} />;
+    case 'edit-class':
+      return selectedClassId ? (
+        <div>반 수정 페이지 (구현 예정) - {selectedClassId}</div>
+      ) : (
+        <div>반을 선택해주세요</div>
+      );
+    case 'add-student-to-class':
+      return selectedClassId ? (
+        <div>반에 학생 추가 페이지 (구현 예정) - {selectedClassId}</div>
+      ) : (
+        <div>반을 선택해주세요</div>
+      );
     default:
       return (
         <Dashboard 
           onLogout={handleUserLogout}
-          onNavigate={handlePageNavigation}
+          onNavigate={(page: string) => handlePageNavigation(page)}
           currentUser={currentUser.display_name || '사용자'}
         />
       );

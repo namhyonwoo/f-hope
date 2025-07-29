@@ -82,3 +82,14 @@ export const attendanceApi = {
   updateAttendanceRecord: (id: string, data: any) => apiClient.put(`/attendance/${id}`, data),
   deleteAttendanceRecord: (id: string) => apiClient.delete(`/attendance/${id}`),
 };
+
+export const classApi = {
+  createClass: (data: any) => apiClient.post('/classes', data),
+  getAllClasses: () => apiClient.get('/classes'),
+  getClassById: (id: string) => apiClient.get(`/classes/${id}`),
+  getClassWithStudents: (id: string) => apiClient.get(`/classes/${id}/students`),
+  updateClass: (id: string, data: any) => apiClient.put(`/classes/${id}`, data),
+  deleteClass: (id: string) => apiClient.delete(`/classes/${id}`),
+  assignStudentToClass: (data: any) => apiClient.post('/classes/assign-student', data),
+  removeStudentFromClass: (studentId: string) => apiClient.delete(`/classes/remove-student/${studentId}`),
+};
