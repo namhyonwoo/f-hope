@@ -93,3 +93,16 @@ export const classApi = {
   assignStudentToClass: (data: any) => apiClient.post('/classes/assign-student', data),
   removeStudentFromClass: (studentId: string) => apiClient.delete(`/classes/remove-student/${studentId}`),
 };
+
+export const missionApi = {
+  getAllMissions: () => apiClient.get('/missions'),
+  getMissionById: (id: string) => apiClient.get(`/missions/${id}`),
+  createMission: (data: any) => apiClient.post('/missions', data),
+  updateMission: (id: string, data: any) => apiClient.put(`/missions/${id}`, data),
+  deleteMission: (id: string) => apiClient.delete(`/missions/${id}`),
+  createMissionCompletion: (data: any) => apiClient.post('/missions/completions', data),
+  updateMissionCompletion: (id: string, data: any) => apiClient.put(`/missions/completions/${id}`, data),
+  bulkCreateMissionCompletions: (data: any) => apiClient.post('/missions/completions/bulk', data),
+  getStudentMissionCompletions: (studentId: string, date: string) => apiClient.get(`/missions/students/${studentId}/completions?date=${date}`),
+  getStudentTalents: (studentId: string) => apiClient.get(`/missions/students/${studentId}/talents`),
+};

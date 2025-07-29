@@ -10,6 +10,9 @@ import { AttendanceRecord } from './entities/attendance-record.entity';
 import { User } from './entities/user.entity';
 import { Auth } from './entities/auth.entity';
 import { Class } from './entities/class.entity';
+import { Mission } from './entities/mission.entity';
+import { MissionCompletion } from './entities/mission-completion.entity';
+import { Talent } from './entities/talent.entity';
 import { MulterModule } from '@nestjs/platform-express';
 import { AuthModule } from './auth/auth.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
@@ -17,6 +20,7 @@ import { ProfileModule } from './profile/profile.module';
 import { StudentModule } from './student/student.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { ClassModule } from './class/class.module';
+import { MissionModule } from './mission/mission.module';
 
 @Module({
   imports: [
@@ -30,7 +34,7 @@ import { ClassModule } from './class/class.module';
       username: process.env.FLOCKS_DB_USER,
       password: process.env.FLOCKS_DB_PASSWORD,
       database: process.env.FLOCKS_DB_NAME,
-      entities: [User, Auth, Student, AttendanceRecord, Class], // Updated entities list
+      entities: [User, Auth, Student, AttendanceRecord, Class, Mission, MissionCompletion, Talent], // Updated entities list
       synchronize: true,
     }),
     MulterModule.register({
@@ -45,6 +49,7 @@ import { ClassModule } from './class/class.module';
     StudentModule,
     AttendanceModule,
     ClassModule,
+    MissionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, Check, X, Users, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { studentApi, attendanceApi } from "@/api/api"; // Import new APIs
+import { studentApi, attendanceApi, missionApi } from "@/api/api"; // Import new APIs
 
 interface Student {
   id: string;
@@ -14,6 +15,42 @@ interface Student {
   photo?: string;
   parent_contact: string;
   address: string;
+}
+
+interface Mission {
+  id: string;
+  name: string;
+  description?: string;
+  config: {
+    type: 'yes_no' | 'count' | 'number';
+    unit?: string;
+    max_value?: number;
+    default_value?: number;
+  };
+  talent_reward: number;
+  is_active: boolean;
+  sort_order: number;
+}
+
+interface MissionCompletion {
+  id: string;
+  mission_id: string;
+  student_id: string;
+  completion_date: string;
+  result: {
+    completed: boolean;
+    value?: number | boolean;
+    notes?: string;
+  };
+  talent_earned: number;
+  mission: Mission;
+}
+
+interface MissionStatus {
+  mission: Mission;
+  completion?: MissionCompletion;
+  isCompleted: boolean;
+  talentEarned: number;
 }
 
 interface AttendanceCheckProps {
@@ -25,11 +62,16 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [missions, setMissions] = useState<Mission[]>([]);
+  const [missionStatuses, setMissionStatuses] = useState<Record<string, MissionStatus[]>>({});
+  const [missionLoading, setMissionLoading] = useState(false);
   const today = new Date().toLocaleDateString('ko-KR');
   const todayDate = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     fetchStudentsAndAttendance();
+    fetchMissions();
   }, []);
 
   const fetchStudentsAndAttendance = async () => {
@@ -61,11 +103,109 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
     }
   };
 
-  const handleAttendanceToggle = (studentId: string) => {
+  const fetchMissions = async () => {
+    try {
+      const response = await missionApi.getAllMissions();
+      setMissions(response.data || []);
+    } catch (error: any) {
+      toast({
+        title: "오류 발생",
+        description: error.response?.data?.message || "미션 목록을 불러오는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchStudentMissions = async (studentId: string) => {
+    setMissionLoading(true);
+    try {
+      const response = await missionApi.getStudentMissionCompletions(studentId, todayDate);
+      setMissionStatuses(prev => ({
+        ...prev,
+        [studentId]: response.data || []
+      }));
+    } catch (error: any) {
+      toast({
+        title: "오류 발생",
+        description: error.response?.data?.message || "학생 미션 정보를 불러오는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setMissionLoading(false);
+    }
+  };
+
+
+
+  const handleStudentSelect = (student: Student) => {
+    // 학생 선택 (미션 섹션 표시) - 출석된 학생만
+    if (attendance[student.id]) {
+      setSelectedStudent(student);
+      if (!missionStatuses[student.id]) {
+        fetchStudentMissions(student.id);
+      }
+    } else {
+      setSelectedStudent(null);
+    }
+  };
+
+  const handleAttendanceToggle = (studentId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // 이벤트 버블링 방지
     setAttendance(prev => ({
       ...prev,
       [studentId]: !prev[studentId]
     }));
+    
+    // 출석이 해제되면 선택된 학생도 해제
+    if (attendance[studentId] && selectedStudent?.id === studentId) {
+      setSelectedStudent(null);
+    }
+  };
+
+  const handleMissionToggle = async (studentId: string, missionId: string, completed: boolean, value?: number) => {
+    try {
+      const mission = missions.find(m => m.id === missionId);
+      if (!mission) return;
+
+      const existingStatus = missionStatuses[studentId]?.find(s => s.mission.id === missionId);
+      
+      if (existingStatus?.completion) {
+        // 기존 기록 업데이트
+        await missionApi.updateMissionCompletion(existingStatus.completion.id, {
+          result: {
+            completed,
+            value,
+            notes: ''
+          }
+        });
+      } else {
+        // 새 기록 생성
+        await missionApi.createMissionCompletion({
+          student_id: studentId,
+          mission_id: missionId,
+          completion_date: todayDate,
+          result: {
+            completed,
+            value,
+            notes: ''
+          }
+        });
+      }
+
+      // 미션 상태 새로고침
+      await fetchStudentMissions(studentId);
+
+      toast({
+        title: "미션 업데이트 완료",
+        description: completed ? `${mission.name} 미션을 완료했습니다!` : `${mission.name} 미션을 취소했습니다.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "오류 발생",
+        description: error.response?.data?.message || "미션 업데이트 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -154,16 +294,19 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
           {students.map((student) => {
             const isPresent = attendance[student.id];
             const age = new Date().getFullYear() - new Date(student.birthday).getFullYear();
+            const isSelected = selectedStudent?.id === student.id;
             
             return (
               <Card 
                 key={student.id}
                 className={`cursor-pointer transition-all duration-300 hover:scale-105 border-2 ${
-                  isPresent 
-                    ? 'border-secondary bg-gradient-to-br from-secondary/20 to-secondary/10' 
-                    : 'border-muted hover:border-primary/30'
+                  isSelected
+                    ? 'border-primary bg-gradient-to-br from-primary/20 to-primary/10'
+                    : isPresent 
+                      ? 'border-secondary bg-gradient-to-br from-secondary/20 to-secondary/10' 
+                      : 'border-muted hover:border-primary/30'
                 }`}
-                onClick={() => handleAttendanceToggle(student.id)}
+                onClick={() => handleStudentSelect(student)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -179,12 +322,20 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
                         <p className="text-sm text-muted-foreground">{age}세</p>
                       </div>
                     </div>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      isPresent 
-                        ? 'bg-secondary text-secondary-foreground' 
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {isPresent ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                          isPresent 
+                            ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' 
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                        onClick={(e) => handleAttendanceToggle(student.id, e)}
+                      >
+                        {isPresent ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                      </div>
+                      {isSelected && (
+                        <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -200,7 +351,7 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
         </div>
 
         {/* 저장 버튼 */}
-        <div className="flex justify-center">
+        <div className="flex justify-center mb-8">
           <Button 
             onClick={handleSave}
             disabled={saving}
@@ -211,6 +362,118 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
             {saving ? "저장 중..." : "출석부 저장하기"}
           </Button>
         </div>
+
+        {/* 미션 섹션 */}
+        {selectedStudent && (
+          <div className="mb-8">
+            <div className="bg-card/95 backdrop-blur-sm border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {selectedStudent.name}의 미션 수행
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    오늘 수행한 미션을 체크해주세요
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedStudent(null)}
+                >
+                  닫기
+                </Button>
+              </div>
+
+              {missionLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                  <span className="ml-2 text-muted-foreground">미션 정보를 불러오는 중...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {missions.map((mission) => {
+                    const status = missionStatuses[selectedStudent.id]?.find(s => s.mission.id === mission.id);
+                    const isCompleted = status?.isCompleted || false;
+                    const currentValue = status?.completion?.result.value as number || mission.config.default_value || 0;
+
+                    return (
+                      <Card 
+                        key={mission.id}
+                        className={`border-2 transition-all duration-200 ${
+                          isCompleted 
+                            ? 'border-secondary bg-gradient-to-br from-secondary/10 to-secondary/5' 
+                            : 'border-muted hover:border-primary/30'
+                        }`}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle className="text-base">{mission.name}</CardTitle>
+                              <p className="text-sm text-muted-foreground">{mission.description}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {mission.talent_reward}달란트
+                              </Badge>
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                isCompleted 
+                                  ? 'bg-secondary text-secondary-foreground' 
+                                  : 'bg-muted text-muted-foreground'
+                              }`}>
+                                {isCompleted ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                              </div>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {mission.config.type === 'yes_no' ? (
+                            <div className="flex space-x-2">
+                              <Button
+                                variant={isCompleted ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleMissionToggle(selectedStudent.id, mission.id, !isCompleted)}
+                                className="flex-1"
+                              >
+                                {isCompleted ? "완료" : "미완료"}
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={mission.config.max_value || 100}
+                                  value={currentValue}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value) || 0;
+                                    handleMissionToggle(selectedStudent.id, mission.id, value > 0, value);
+                                  }}
+                                  className="w-20"
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                  {mission.config.unit}
+                                </span>
+                                <Button
+                                  variant={isCompleted ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => handleMissionToggle(selectedStudent.id, mission.id, !isCompleted, currentValue)}
+                                >
+                                  {isCompleted ? "완료" : "미완료"}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

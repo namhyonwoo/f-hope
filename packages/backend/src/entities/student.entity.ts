@@ -2,6 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { User } from './user.entity'; // Import User entity
 import { AttendanceRecord } from './attendance-record.entity';
 import { Class } from './class.entity';
+import { MissionCompletion } from './mission-completion.entity';
+import { Talent } from './talent.entity';
 
 @Entity('students')
 export class Student {
@@ -39,6 +41,12 @@ export class Student {
 
   @OneToMany(() => AttendanceRecord, attendanceRecord => attendanceRecord.student)
   attendanceRecords: AttendanceRecord[];
+
+  @OneToMany(() => MissionCompletion, missionCompletion => missionCompletion.student)
+  missionCompletions: MissionCompletion[];
+
+  @OneToMany(() => Talent, talent => talent.student)
+  talents: Talent[];
 
   @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
