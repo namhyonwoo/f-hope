@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Edit, Trash2, Users, GraduationCap, Phone, MapPin, UserPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { classApi } from "@/api/api";
+import { AddStudentToClassDialog } from "./AddStudentToClassDialog";
 
 interface Class {
   id: string;
@@ -35,6 +36,7 @@ interface ClassDetailProps {
 export const ClassDetail = ({ classId, onBack, onNavigate }: ClassDetailProps) => {
   const [class_, setClass] = useState<Class | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchClassDetail();
@@ -126,7 +128,7 @@ export const ClassDetail = ({ classId, onBack, onNavigate }: ClassDetailProps) =
                 반 정보 수정
               </Button>
               <Button 
-                onClick={() => onNavigate('add-student-to-class', class_.id)}
+                onClick={() => setIsAddStudentDialogOpen(true)}
                 className="bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground hover:from-secondary/80 hover:to-secondary"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
@@ -252,7 +254,7 @@ export const ClassDetail = ({ classId, onBack, onNavigate }: ClassDetailProps) =
                       이 반에 학생을 추가해보세요.
                     </p>
                     <Button 
-                      onClick={() => onNavigate('add-student-to-class', class_.id)}
+                      onClick={() => setIsAddStudentDialogOpen(true)}
                       className="bg-gradient-to-r from-secondary to-secondary/80"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
@@ -265,6 +267,17 @@ export const ClassDetail = ({ classId, onBack, onNavigate }: ClassDetailProps) =
           </div>
         </div>
       </main>
+
+      {/* 학생 추가 다이얼로그 */}
+      {class_ && (
+        <AddStudentToClassDialog
+          isOpen={isAddStudentDialogOpen}
+          onClose={() => setIsAddStudentDialogOpen(false)}
+          classId={class_.id}
+          className={class_.name}
+          onSuccess={fetchClassDetail}
+        />
+      )}
     </div>
   );
 }; 
