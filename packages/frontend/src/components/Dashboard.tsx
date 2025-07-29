@@ -85,21 +85,19 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
               })}
             </h2>
             <Badge 
-              variant={isSunday ? "default" : "secondary"}
-              className={isSunday ? "bg-secondary text-secondary-foreground" : ""}
+              variant="default"
+              className="bg-secondary text-secondary-foreground"
             >
-              {isSunday ? "출석 가능일" : "출석 불가일"}
+              개발 모드 - 출석 가능
             </Badge>
           </div>
           
-          {!isSunday && (
-            <div className="bg-muted/50 border border-muted rounded-lg p-4 flex items-center space-x-3">
-              <Clock className="w-5 h-5 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                출석체크는 일요일에만 가능합니다.
-              </p>
-            </div>
-          )}
+          <div className="bg-secondary/20 border border-secondary/30 rounded-lg p-4 flex items-center space-x-3">
+            <Clock className="w-5 h-5 text-secondary-foreground" />
+            <p className="text-sm text-secondary-foreground">
+              개발 단계에서는 모든 요일에 출석 체크가 가능합니다.
+            </p>
+          </div>
         </div>
 
         {/* 통계 카드 */}
@@ -164,7 +162,7 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
                 <div>
                   <CardTitle>출석 체크</CardTitle>
                   <CardDescription>
-                    {isSunday ? "오늘 출석을 체크하세요" : "일요일에 출석 체크 가능"}
+                    오늘 출석을 체크하세요 (개발 모드)
                   </CardDescription>
                 </div>
               </div>
@@ -173,7 +171,6 @@ export const Dashboard = ({ onLogout, onNavigate, currentUser }: DashboardProps)
               <Button 
                 className="w-full h-12 bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary"
                 onClick={() => onNavigate('attendance')}
-                disabled={!isSunday}
               >
                 출석 체크하기
               </Button>

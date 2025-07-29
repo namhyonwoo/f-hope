@@ -12,10 +12,11 @@ export class AttendanceService {
   ) {}
 
   async createAttendanceRecord(userId: string, createAttendanceRecordDto: CreateAttendanceRecordDto): Promise<AttendanceRecord> {
-    const attendanceDate = new Date(createAttendanceRecordDto.attendance_date);
-    if (attendanceDate.getDay() !== 0) { // 0 = Sunday
-      throw new BadRequestException('Attendance can only be recorded on Sundays.');
-    }
+    // 개발 단계에서는 일요일 제약을 임시로 해제
+    // const attendanceDate = new Date(createAttendanceRecordDto.attendance_date);
+    // if (attendanceDate.getDay() !== 0) { // 0 = Sunday
+    //   throw new BadRequestException('Attendance can only be recorded on Sundays.');
+    // }
 
     const newRecord = this.attendanceRecordsRepository.create({
       ...createAttendanceRecordDto,
@@ -42,12 +43,13 @@ export class AttendanceService {
   async updateAttendanceRecord(userId: string, id: string, updateAttendanceRecordDto: UpdateAttendanceRecordDto): Promise<AttendanceRecord> {
     const record = await this.findOneAttendanceRecord(userId, id); // Ensure record belongs to user
 
-    if (updateAttendanceRecordDto.attendance_date) {
-      const newAttendanceDate = new Date(updateAttendanceRecordDto.attendance_date);
-      if (newAttendanceDate.getDay() !== 0) { // 0 = Sunday
-        throw new BadRequestException('Attendance date can only be updated to a Sunday.');
-      }
-    }
+    // 개발 단계에서는 일요일 제약을 임시로 해제
+    // if (updateAttendanceRecordDto.attendance_date) {
+    //   const newAttendanceDate = new Date(updateAttendanceRecordDto.attendance_date);
+    //   if (newAttendanceDate.getDay() !== 0) { // 0 = Sunday
+    //     throw new BadRequestException('Attendance date can only be updated to a Sunday.');
+    //   }
+    // }
 
     await this.attendanceRecordsRepository.update(id, updateAttendanceRecordDto);
     return this.findOneAttendanceRecord(userId, id);
@@ -61,10 +63,13 @@ export class AttendanceService {
   async upsertAttendanceRecords(userId: string, records: CreateAttendanceRecordDto[]): Promise<AttendanceRecord[]> {
     const savedRecords: AttendanceRecord[] = [];
     for (const recordDto of records) {
+      // 개발 단계에서는 일요일 제약을 임시로 해제
+      // const attendanceDate = new Date(recordDto.attendance_date);
+      // if (attendanceDate.getDay() !== 0) { // 0 = Sunday
+      //   throw new BadRequestException('Attendance can only be recorded on Sundays.');
+      // }
+
       const attendanceDate = new Date(recordDto.attendance_date);
-      if (attendanceDate.getDay() !== 0) { // 0 = Sunday
-        throw new BadRequestException('Attendance can only be recorded on Sundays.');
-      }
 
       // Check if a record for this student and date already exists
       let existingRecord = await this.attendanceRecordsRepository.findOne({

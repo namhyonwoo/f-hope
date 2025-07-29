@@ -142,9 +142,9 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
         <div className="bg-secondary/20 border border-secondary/30 rounded-lg p-4 mb-6 flex items-center space-x-3">
           <Calendar className="w-5 h-5 text-secondary-foreground" />
           <div>
-            <p className="font-medium text-secondary-foreground">일요일 출석 체크</p>
+            <p className="font-medium text-secondary-foreground">출석 체크 (개발 모드)</p>
             <p className="text-sm text-muted-foreground">
-              각 학생의 이름을 터치하여 출석을 체크하세요.
+              각 학생의 이름을 터치하여 출석을 체크하세요. (개발 단계에서는 모든 요일에 출석 체크 가능)
             </p>
           </div>
         </div>

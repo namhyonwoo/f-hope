@@ -92,6 +92,7 @@ export class AuthService {
       return null;
     }
     return { 
+      userId: user.id, // userId로 변경
       id: user.id, 
       email: payload.email, 
       display_name: user.display_name,
