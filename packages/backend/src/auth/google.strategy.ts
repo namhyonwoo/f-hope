@@ -29,6 +29,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       accessToken,
       id: profile.id, // Google ID를 'id'로 전달하여 AuthService에서 socialId로 받도록 합니다.
     };
+    //print profile
+    console.log(profile);
+
     done(null, user);
   }
 }

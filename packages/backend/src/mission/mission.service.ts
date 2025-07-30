@@ -287,7 +287,7 @@ export class MissionService {
       return {
         mission,
         completion,
-        isCompleted: !!completion,
+        isCompleted: completion?.result?.completed || false,
         talentEarned: completion?.talent_earned || 0,
       };
     });

@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Check, X, Users, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { studentApi, attendanceApi, missionApi } from "@/api/api"; // Import new APIs
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Student {
   id: string;
@@ -66,6 +76,13 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [missionStatuses, setMissionStatuses] = useState<Record<string, MissionStatus[]>>({});
   const [missionLoading, setMissionLoading] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [pendingMissionCancel, setPendingMissionCancel] = useState<{
+    studentId: string;
+    missionId: string;
+    missionName: string;
+    currentValue?: number;
+  } | null>(null);
   const today = new Date().toLocaleDateString('ko-KR');
   const todayDate = new Date().toISOString().split('T')[0];
 
@@ -163,6 +180,29 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
   };
 
   const handleMissionToggle = async (studentId: string, missionId: string, completed: boolean, value?: number) => {
+    const mission = missions.find(m => m.id === missionId);
+    if (!mission) return;
+
+    const existingStatus = missionStatuses[studentId]?.find(s => s.mission.id === missionId);
+    const isCurrentlyCompleted = existingStatus?.isCompleted || false;
+
+    // 완료된 미션을 취소하려는 경우 확인 대화상자 표시
+    if (isCurrentlyCompleted && !completed) {
+      setPendingMissionCancel({
+        studentId,
+        missionId,
+        missionName: mission.name,
+        currentValue: value
+      });
+      setShowCancelDialog(true);
+      return;
+    }
+
+    // 일반적인 미션 토글 처리
+    await executeMissionToggle(studentId, missionId, completed, value);
+  };
+
+  const executeMissionToggle = async (studentId: string, missionId: string, completed: boolean, value?: number) => {
     try {
       const mission = missions.find(m => m.id === missionId);
       if (!mission) return;
@@ -206,6 +246,25 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleConfirmMissionCancel = async () => {
+    if (!pendingMissionCancel) return;
+    
+    await executeMissionToggle(
+      pendingMissionCancel.studentId,
+      pendingMissionCancel.missionId,
+      false,
+      pendingMissionCancel.currentValue
+    );
+    
+    setShowCancelDialog(false);
+    setPendingMissionCancel(null);
+  };
+
+  const handleCancelMissionCancel = () => {
+    setShowCancelDialog(false);
+    setPendingMissionCancel(null);
   };
 
   const handleSave = async () => {
@@ -400,11 +459,16 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
                     return (
                       <Card 
                         key={mission.id}
-                        className={`border-2 transition-all duration-200 ${
+                        className={`border-2 transition-all duration-200 cursor-pointer hover:shadow-md ${
                           isCompleted 
                             ? 'border-secondary bg-gradient-to-br from-secondary/10 to-secondary/5' 
                             : 'border-muted hover:border-primary/30'
                         }`}
+                        onClick={() => {
+                          if (mission.config.type === 'yes_no') {
+                            handleMissionToggle(selectedStudent.id, mission.id, !isCompleted);
+                          }
+                        }}
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
@@ -416,13 +480,6 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
                               <Badge variant="secondary" className="text-xs">
                                 {mission.talent_reward}달란트
                               </Badge>
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                isCompleted 
-                                  ? 'bg-secondary text-secondary-foreground' 
-                                  : 'bg-muted text-muted-foreground'
-                              }`}>
-                                {isCompleted ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                              </div>
                             </div>
                           </div>
                         </CardHeader>
@@ -432,37 +489,46 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
                               <Button
                                 variant={isCompleted ? "default" : "outline"}
                                 size="sm"
-                                onClick={() => handleMissionToggle(selectedStudent.id, mission.id, !isCompleted)}
-                                className="flex-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMissionToggle(selectedStudent.id, mission.id, !isCompleted);
+                                }}
+                                className="flex-1 transition-all duration-200"
                               >
-                                {isCompleted ? "완료" : "미완료"}
+                                {isCompleted ? "✅ 완료" : "❌ 미완료"}
                               </Button>
                             </div>
                           ) : (
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={mission.config.max_value || 100}
-                                  value={currentValue}
-                                  onChange={(e) => {
-                                    const value = parseInt(e.target.value) || 0;
-                                    handleMissionToggle(selectedStudent.id, mission.id, value > 0, value);
-                                  }}
-                                  className="w-20"
-                                />
-                                <span className="text-sm text-muted-foreground">
-                                  {mission.config.unit}
-                                </span>
-                                <Button
-                                  variant={isCompleted ? "default" : "outline"}
-                                  size="sm"
-                                  onClick={() => handleMissionToggle(selectedStudent.id, mission.id, !isCompleted, currentValue)}
-                                >
-                                  {isCompleted ? "완료" : "미완료"}
-                                </Button>
-                              </div>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="number"
+                                min="0"
+                                max={mission.config.max_value || 100}
+                                value={currentValue}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  const value = parseInt(e.target.value) || 0;
+                                  // 입력값이 변경되면 자동으로 완료 상태로 설정
+                                  handleMissionToggle(selectedStudent.id, mission.id, value > 0, value);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-20"
+                                placeholder="0"
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                {mission.config.unit}
+                              </span>
+                              <Button
+                                variant={isCompleted ? "default" : "outline"}
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMissionToggle(selectedStudent.id, mission.id, !isCompleted, currentValue);
+                                }}
+                                className="flex-1 transition-all duration-200"
+                              >
+                                {isCompleted ? "✅ 완료" : "❌ 미완료"}
+                              </Button>
                             </div>
                           )}
                         </CardContent>
@@ -475,6 +541,33 @@ export const AttendanceCheck = ({ onBack }: AttendanceCheckProps) => {
           </div>
         )}
       </main>
+
+      {/* 미션 취소 확인 대화상자 */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>미션 완료 취소</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{pendingMissionCancel?.missionName}</strong> 미션의 완료를 취소하시겠습니까?
+              <br />
+              <span className="text-sm text-muted-foreground">
+                취소하면 해당 미션의 달란트 보상도 회수됩니다.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelMissionCancel}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmMissionCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              완료 취소
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
